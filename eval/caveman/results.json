@@ -1,0 +1,84 @@
+{
+  "generatedAt": "2026-08-02T05:41:14.487Z",
+  "compressor": "/Users/zak/Desktop/projects/pxpipe/src/core/caveman.ts",
+  "rows": [
+    {
+      "fixture": "a-webfetch.txt",
+      "control": false,
+      "charsBefore": 3375,
+      "charsAfter": 3375,
+      "tokensBefore": 730,
+      "tokensAfter": 730,
+      "tokenReductionPct": 0,
+      "factsExtracted": 55,
+      "factMisses": [],
+      "idempotent": true,
+      "pass": false
+    },
+    {
+      "fixture": "b-readme.md",
+      "control": false,
+      "charsBefore": 3261,
+      "charsAfter": 3261,
+      "tokensBefore": 876,
+      "tokensAfter": 876,
+      "tokenReductionPct": 0,
+      "factsExtracted": 93,
+      "factMisses": [],
+      "idempotent": true,
+      "pass": false
+    },
+    {
+      "fixture": "c-api-guide.md",
+      "control": false,
+      "charsBefore": 4157,
+      "charsAfter": 4157,
+      "tokensBefore": 970,
+      "tokensAfter": 970,
+      "tokenReductionPct": 0,
+      "factsExtracted": 97,
+      "factMisses": [],
+      "idempotent": true,
+      "pass": false
+    },
+    {
+      "fixture": "d-issue-thread.txt",
+      "control": false,
+      "charsBefore": 3590,
+      "charsAfter": 3590,
+      "tokensBefore": 970,
+      "tokensAfter": 970,
+      "tokenReductionPct": 0,
+      "factsExtracted": 87,
+      "factMisses": [],
+      "idempotent": true,
+      "pass": false
+    },
+    {
+      "fixture": "e-code-control.txt",
+      "control": true,
+      "charsBefore": 3274,
+      "charsAfter": 3274,
+      "tokensBefore": 900,
+      "tokensAfter": 900,
+      "tokenReductionPct": 0,
+      "factsExtracted": 65,
+      "factMisses": [],
+      "idempotent": true,
+      "pass": true
+    },
+    {
+      "fixture": "f-log-control.txt",
+      "control": true,
+      "charsBefore": 3246,
+      "charsAfter": 3246,
+      "tokensBefore": 1350,
+      "tokensAfter": 1350,
+      "tokenReductionPct": 0,
+      "factsExtracted": 177,
+      "factMisses": [],
+      "idempotent": true,
+      "pass": true
+    }
+  ]
+}

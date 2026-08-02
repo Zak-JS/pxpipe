@@ -1,0 +1,107 @@
+import { createHash } from 'node:crypto';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { dirname, join, relative } from 'node:path';
+
+export interface ManifestEntry {
+  path: string;
+  sha256: string;
+  bytes: number;
+  mtimeMs: number;
+}
+
+export interface Manifest {
+  version: 2;
+  generatedAt: string;
+  root: string;
+  entries: ManifestEntry[];
+}
+
+const MANIFEST_VERSION = 2 as const;
+const HASH_CONCURRENCY = 8;
+const EMPTY_SHA256 =
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+
+export async function hashFile(absPath: string): Promise<string> {
+  const buf = await readFile(absPath);
+  if (buf.length === 0) return EMPTY_SHA256;
+  return createHash('sha256').update(buf).digest('hex');
+}
+
+async function mapLimit<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+export async function buildManifest(
+  root: string,
+  files: readonly { abs: string; bytes: number; mtimeMs: number }[],
+): Promise<Manifest> {
+  const entries = await mapLimit(files, HASH_CONCURRENCY, async (f) => ({
+    path: relative(root, f.abs).split('\\').join('/'),
+    sha256: await hashFile(f.abs),
+    bytes: f.bytes,
+    mtimeMs: Math.floor(f.mtimeMs),
+  }));
+  entries.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return {
+    version: MANIFEST_VERSION,
+    generatedAt: new Date().toISOString(),
+    root,
+    entries,
+  };
+}
+
+export function diffManifests(
+  before: Manifest,
+  after: Manifest,
+): { added: string[]; removed: string[]; changed: string[] } {
+  const beforeMap = new Map(before.entries.map((e) => [e.path, e.sha256]));
+  const afterMap = new Map(after.entries.map((e) => [e.path, e.sha256]));
+  const added: string[] = [];
+  const removed: string[] = [];
+  const changed: string[] = [];
+  for (const [path, sha] of afterMap) {
+    const prev = beforeMap.get(path);
+    if (prev === undefined) added.push(path);
+    else if (prev !== sha) changed.push(path);
+  }
+  for (const path of beforeMap.keys()) {
+    if (!afterMap.has(path)) removed.push(path);
+  }
+  return { added, removed, changed };
+}
+
+export async function writeManifest(manifest: Manifest, outPath: string): Promise<void> {
+  await mkdir(dirname(outPath), { recursive: true });
+  const json = JSON.stringify(manifest, null, 2) + '\n';
+  await writeFile(outPath, json, 'utf8');
+}
+
+export async function loadManifest(path: string): Promise<Manifest | null> {
+  try {
+    const raw = await readFile(path, 'utf8');
+    const parsed = JSON.parse(raw) as Manifest;
+    if (parsed.version !== MANIFEST_VERSION) return null;
+    return parsed;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw err;
+  }
+}
+
+export function manifestCachePath(root: string, name = 'default'): string {
+  const key = createHash('sha256').update(root).digest('hex').slice(0, 12);
+  return join(root, '.manifest-cache', `${name}-${key}.json`);
+}

@@ -1,0 +1,29 @@
+2026-07-28T09:14:02.113Z INFO  [gateway] listening on 0.0.0.0:8443 pid=31427 version=3.9.2 commit=b81f04ce
+2026-07-28T09:14:02.201Z INFO  [pool] postgres pool ready host=db-primary.internal port=5432 max=20 idle_timeout_ms=30000
+2026-07-28T09:14:02.244Z INFO  [cache] redis connected addr=10.4.2.17:6379 latency_ms=0.8
+2026-07-28T09:14:05.590Z INFO  [router] route table loaded routes=142 checksum=7d19aa30f2c855e1
+2026-07-28T09:14:11.032Z WARN  [auth] jwks refresh slow url=https://auth.internal/.well-known/jwks.json took_ms=1893 threshold_ms=1000
+2026-07-28T09:15:00.004Z INFO  [sched] job=prune-sessions started run_id=018f7a11-42be-7d90-a6c3-77e1b02cd4f9
+2026-07-28T09:15:00.312Z INFO  [sched] job=prune-sessions done pruned=1204 kept=88213 took_ms=308
+2026-07-28T09:16:41.877Z ERROR [upstream] request failed method=POST path=/v2/sessions status=502 upstream=svc-sessions-7f9d4b6c8-k2xwl attempt=1 took_ms=4012
+2026-07-28T09:16:41.902Z INFO  [upstream] retrying method=POST path=/v2/sessions attempt=2 backoff_ms=250
+2026-07-28T09:16:42.310Z INFO  [upstream] request ok method=POST path=/v2/sessions status=201 attempt=2 took_ms=381
+2026-07-28T09:18:03.559Z WARN  [pool] slow query ms=1204 threshold=1000 query_hash=c41d99e02b17 caller=sessions.list
+2026-07-28T09:21:17.006Z INFO  [deploy] config reload requested by=ops@bramblewood.dev source=consul key=gateway/limits
+2026-07-28T09:21:17.041Z INFO  [deploy] rate limits updated rps_default=600 rps_burst=900 previous=500/750
+2026-07-28T09:24:55.482Z ERROR [cache] redis timeout addr=10.4.2.17:6379 op=GET key=sess:018f7a0e:meta timeout_ms=250 attempt=1
+2026-07-28T09:24:55.499Z INFO  [cache] fallback to postgres key=sess:018f7a0e:meta took_ms=17
+2026-07-28T09:24:56.010Z INFO  [cache] redis recovered addr=10.4.2.17:6379 probe_latency_ms=1.1 outage_ms=528
+2026-07-28T09:30:00.002Z INFO  [sched] job=rotate-audit-log started run_id=018f7a1e-ff10-7b34-9c02-51a6de88b30a
+2026-07-28T09:30:00.187Z INFO  [audit] rotated file=/var/log/gateway/audit-20260728-0930.jsonl size_bytes=52428711 entries=48122
+2026-07-28T09:30:00.190Z INFO  [sched] job=rotate-audit-log done took_ms=188
+2026-07-28T09:33:12.664Z WARN  [auth] token replay suspected sub=svc-billing jti=9d4e1a22-01c3-4f8e-bb1d-2a90f4c17e55 seen_count=2 window_s=30
+2026-07-28T09:33:12.667Z INFO  [auth] token revoked jti=9d4e1a22-01c3-4f8e-bb1d-2a90f4c17e55 propagation_ms=41
+2026-07-28T09:41:09.220Z INFO  [gc] heap_used_mb=412 heap_limit_mb=1024 rss_mb=598 pause_ms=11.4 kind=major
+2026-07-28T09:45:00.003Z INFO  [sched] job=prune-sessions started run_id=018f7a2c-8a02-7e11-b0f7-c93aa1d0e622
+2026-07-28T09:45:00.295Z INFO  [sched] job=prune-sessions done pruned=1187 kept=88342 took_ms=292
+2026-07-28T09:47:33.851Z ERROR [upstream] circuit opened upstream=svc-exports failures=5 window_s=60 cooldown_s=30
+2026-07-28T09:48:04.001Z INFO  [upstream] circuit half-open upstream=svc-exports probe=GET /healthz
+2026-07-28T09:48:04.093Z INFO  [upstream] circuit closed upstream=svc-exports probe_status=200 probe_ms=92
+2026-07-28T09:52:20.718Z INFO  [gateway] connections open=1841 idle=1203 tls_handshakes_per_s=44.2
+2026-07-28T09:59:59.991Z INFO  [metrics] window=45m requests=128437 rps=47.6 p50_ms=38 p95_ms=141 p99_ms=402 errors=0.31%

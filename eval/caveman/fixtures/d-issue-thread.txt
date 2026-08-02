@@ -1,0 +1,31 @@
+Issue #2847: Watcher leaks inotify handles after ENOSPC on Linux
+Opened 2026-03-14 by @tomasz-w · 23 comments · Labels: bug, platform:linux, P1
+
+@tomasz-w commented on 2026-03-14:
+We run the watcher inside a CI sandbox with fs.inotify.max_user_watches set to 8192. When the limit is hit we correctly get the ENOSPC error surfaced, but after that every subsequent rebuild leaks roughly 40 handles that are never reclaimed. After about 200 rebuilds the sandbox is unusable and pidof-based cleanup is our only recourse. Reproduced on 5.2.0 and 5.2.1, ubuntu-22.04 runners, kernel 6.5.0-1015-azure. Not reproducible on macOS, which is expected since the FSEvents backend never takes per-directory handles.
+
+@marisol-ng commented on 2026-03-14:
+Can you confirm whether you are on the chokidar-compat layer or the native watcher? The compat layer wraps errors differently and I want to rule out the double-registration path in src/watch/compat.ts before digging into the native side.
+
+@tomasz-w commented on 2026-03-15:
+Native. Config is watcher: { backend: "native", pollFallback: false }. I also captured strace output; each failed rebuild calls inotify_add_watch 412 times and inotify_rm_watch only 371 times, so the leak is 41 per cycle, consistent with what we see in /proc/self/fd growth.
+
+@marisol-ng commented on 2026-03-17:
+Found it. When inotify_add_watch fails with ENOSPC we throw from the middle of the registration loop in registerTree() and the cleanup path in the catch block only unwinds watches recorded in the current batch map, not the ones already committed to the global registry earlier in the same tick. The 41 you measured is the average batch remainder. Fix is to move the registry commit after the whole loop succeeds, i.e. make registration transactional. Draft in fix/inotify-enospc-unwind, first commit is 9f31c7ab2de40cc1889fd0e4a1b7a3c55e21bd08.
+
+@brettkav commented on 2026-03-17:
+Drive-by, but note the same pattern exists in unregisterSubtree() in src/watch/native/registry.ts, line 188. If the rm loop throws halfway you get the mirror-image leak. Might be worth fixing both while you are in there.
+
+@marisol-ng commented on 2026-03-18:
+Good catch, folded it in as 4c0de91. Also added a regression test that mocks the syscall layer to inject ENOSPC at watch number 300 of 412 and asserts the registry ends the tick with exactly the pre-call count. Test lives in tests/watch/enospc-unwind.test.ts and fails reliably against 5.2.1.
+
+@tomasz-w commented on 2026-03-19:
+Patched our runners with the branch build and ran 1,000 rebuild cycles overnight: fd count is flat at 96, was previously climbing past 40,000 before the sandbox died. Consider this confirmed fixed from our side. One question: any chance of a backport to the 4.x line? We have one legacy pipeline pinned to 4.11.2 that cannot move before Q3.
+
+@marisol-ng commented on 2026-03-20:
+Backport is reasonable, the patch applies clean except for the registry import path which moved in 5.0.0. Cherry-picked to release/4.x as d7e02f5a91c3. It will go out in 4.11.3, likely next Tuesday, 2026-03-24, alongside the OpenSSL bump.
+
+@hcastellanos commented on 2026-03-21:
+For anyone landing here from search before the release: the workaround that does not require a patched build is setting watcher.batchSize to 1 in .watcherrc.json. It makes registration effectively transactional at a roughly 15% startup cost on large trees (measured 11.2 s vs 9.7 s on a 120k-file monorepo). Remove it once you are on 5.2.2 or 4.11.3.
+
+Merged 2026-03-22 via #2861, released in 5.2.2 the same day. Closed by @marisol-ng.
