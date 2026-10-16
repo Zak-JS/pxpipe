@@ -43,7 +43,9 @@ import {
 import { factSheetText } from './factsheet.js';
 import { stripSchemaDescriptions, schemaHasStructure } from './schema-strip.js';
 import { bytesToBase64 } from './png.js';
-import { collapseHistory, HISTORY_SYNTHETIC_INTRO } from './history.js';
+import { collapseHistory, HISTORY_DEFAULTS, HISTORY_SYNTHETIC_INTRO } from './history.js';
+import { cavemanCompressor } from './caveman.js';
+import { countTokens as o200kCountTokens } from 'gpt-tokenizer/encoding/o200k_base';
 import type { GptHistoryOptions } from './openai-history.js';
 import { CACHE_CREATE_RATE, CACHE_READ_RATE } from './baseline.js';
 import { visionTokens, type VisionPricing } from './vision-cost.js';
@@ -125,6 +127,11 @@ export interface TransformOptions {
    *  for every block rendered to images. Off by default (entries inflate `info`;
    *  only a stateful harness can use them). */
   emitRecoverable?: boolean;
+  /** Prose-compression second path (PXPIPE_CAVEMAN): rewrite large SPARSE
+   *  tool_result prose the imaging gate declined (pixels lose money below
+   *  ~3 chars/token) with the rule-based caveman compressor instead. Text-to-text,
+   *  deterministic, fact-preserving (see src/core/prose.ts). Off by default. */
+  cavemanProse?: boolean;
 }
 
 const DEFAULTS: Required<TransformOptions> = {
@@ -145,6 +152,7 @@ const DEFAULTS: Required<TransformOptions> = {
   reflow: true,
   keepSharp: () => false,
   emitRecoverable: false,
+  cavemanProse: false,
   // GPT-only knobs; the Anthropic transform ignores them but Required<> needs them.
   collapseHistory: true,
   gptHistory: {},
@@ -658,6 +666,12 @@ export interface TransformInfo {
   keptSharpBlocks?: number;
   /** Imaged live-region blocks with original text + provenance, when `emitRecoverable`. */
   recoverable?: RecoverableBlock[];
+  /** tool_result blocks rewritten by the caveman prose-compression path. */
+  cavemanBlocks?: number;
+  /** Net chars removed by caveman across all rewritten blocks (prefix line included). */
+  cavemanCharsRemoved?: number;
+  /** Prose-compressor backend id ("caveman"); set only when cavemanBlocks > 0. */
+  cavemanBackend?: string;
   truncatedToolResults?: number;
   omittedChars?: number;
   /** History-collapse: messages collapsed into the synthetic prepended user message. */
